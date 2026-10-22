@@ -1,0 +1,4 @@
+# /etc/escritorio-agentes/instances.conf — one install per line:
+# name        folder                        systemd service
+acme          /opt/agent-office-acme        agent-office-acme
+demo          /opt/agent-office-demo        agent-office-demo

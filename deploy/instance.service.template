@@ -1,0 +1,22 @@
+# Copie para /etc/systemd/system/<servico>.service e ajuste os valores entre <>.
+[Unit]
+Description=Escritório de Agentes <NOME> (painel Multica)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=<usuario-com-multica-logado>
+WorkingDirectory=<pasta>
+Environment=PORT=<porta>
+Environment=HOST=127.0.0.1
+Environment=POLL_SECONDS=20
+Environment=MULTICA_BIN=/usr/local/bin/multica
+Environment=MULTICA_WORKSPACE_ID=<id-do-workspace>
+# ADMIN_PASSWORD_HASH, SESSION_SECRET, COOKIE_SECURE=1, BRAND_NAME, BRAND_LOGO
+EnvironmentFile=/etc/<servico>.env
+ExecStart=/usr/bin/env node server.mjs
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

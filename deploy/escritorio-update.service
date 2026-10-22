@@ -1,0 +1,6 @@
+[Unit]
+Description=Atualiza as instalações do Escritório de Agentes a partir do GitHub
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/escritorio-update

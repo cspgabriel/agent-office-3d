@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <title>Escritório de Agentes · Agent Office</title>
+    <link rel="icon" href="/brand/logo.svg" />
+    <link rel="stylesheet" href="/styles.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <img class="logo-img" src="/brand/logo.svg" alt="Agent Office" />
+        <div><b>Escritório de Agentes</b><small>Agent Office · Multica</small></div>
+      </div>
+      <div id="stats" class="chips"></div>
+      <div class="spacer"></div>
+      <nav class="segmented" id="views" aria-label="Visão">
+        <button type="button" data-view="3d" aria-pressed="true">🧊 3D</button>
+        <button type="button" data-view="2d" aria-pressed="false">☰ Lista</button>
+        <button type="button" data-view="agenda" aria-pressed="false">📅 Agenda</button>
+        <button type="button" data-view="history" aria-pressed="false" title="Execuções recentes, agendadas que rodaram e todas as issues por ordem de atividade">📜 Histórico</button>
+      </nav>
+      <label class="pick" title="Qual prédio ver: a sede com todos, um prédio por máquina/runtime, ou só um">
+        🏢 <select id="campus" aria-label="Prédio"><option value="sede">Sede · todos</option></select>
+      </label>
+      <nav class="segmented" id="scene-mode" aria-label="Cena 3D">
+        <button type="button" data-mode="facade" aria-pressed="true">🏙️ Orla</button>
+        <button type="button" data-mode="interior" aria-pressed="false">🏢 Escritório</button>
+      </nav>
+      <button id="meet-btn" type="button" title="Reuniões de agentes: chamar vários agentes para uma mesma tarefa">🤝 <span class="lbl">Reunião</span> <span id="meet-count" class="count-badge" hidden></span></button>
+      <button id="palette-btn" type="button" title="Busca rápida (Ctrl+K)">🔎 <kbd>Ctrl K</kbd></button>
+      <button id="feed-btn" type="button" title="Feed ao vivo">📰 <span id="feed-count" class="count-badge" hidden></span></button>
+      <details class="settings">
+        <summary title="Ajustes da cena">⚙️</summary>
+        <div class="settings-pop">
+          <div class="set-row"><span>Hora da cena</span><label class="clock" title="Hora do Rio que define o céu, o sol e as luzes da cena">
+        <span id="clock-icon">☀️</span>
+        <span id="clock-time">--:--</span>
+        <select id="clock-mode" aria-label="Hora da cena">
+          <option value="live">Ao vivo</option>
+          <option value="6.4">Amanhecer</option>
+          <option value="12">Meio-dia</option>
+          <option value="17.9">Pôr do sol</option>
+          <option value="21">Noite</option>
+        </select>
+      </label></div>
+          <div class="set-row"><span>Cenário</span><select id="theme" aria-label="Tema do cenário"><option value="premium">🌴 Cobertura premium</option><option value="classico">🏙️ Orla clássica</option><option value="minimal">⚪ Minimalista (leve)</option></select></div>
+          <div class="set-row"><span>Avatares</span><select id="avatar-style" aria-label="Avatar"><option value="pessoa">🧑 Pessoas</option><option value="robo">🤖 Robôs</option></select></div>
+          <div class="set-row"><span>Qualidade</span><select id="quality" aria-label="Qualidade"><option value="alta">✨ Alta</option><option value="leve">⚡ Leve</option></select></div>
+        </div>
+      </details>
+      <button id="auth" type="button" hidden>🔐 Entrar</button>
+    </header>
+    <main>
+      <aside>
+        <div class="side-tabs" role="tablist">
+          <button type="button" role="tab" data-side="agents" aria-selected="true">Agentes <span id="count-agents"></span></button>
+          <button type="button" role="tab" data-side="schedules" aria-selected="false">Agendadas <span id="count-schedules"></span></button>
+        </div>
+        <input id="search" type="search" placeholder="Buscar agente ou issue…" />
+        <div id="filters" role="group" aria-label="Filtrar"></div>
+        <ul id="agent-list"></ul>
+        <ul id="schedule-list" hidden></ul>
+        <footer class="side-foot"><span id="updated">carregando…</span></footer>
+      </aside>
+      <section id="stage">
+        <div id="scene"></div>
+        <div id="grid2d" hidden></div>
+        <div id="agenda" hidden></div>
+        <div id="history" hidden></div>
+        <aside id="issue-detail" class="issue-detail" hidden></aside>
+        <div id="detail" class="drawer" hidden></div>
+        <div id="sched-detail" class="drawer" hidden></div>
+        <div id="working-now" class="working-now" hidden></div>
+        <div id="legend" class="legend">
+          <span><i class="dot working"></i>Trabalhando · na mesa</span>
+          <span><i class="dot idle"></i>Ocioso · copa</span>
+          <span><i class="dot blocked"></i>Bloqueado · pendências</span>
+          <span><i class="dot offline"></i>Offline · desligados</span>
+        </div>
+        <div id="feed" class="feed" hidden></div>
+        <div id="error" hidden></div>
+      </section>
+    </main>
+    <footer class="credits">Modelos 3D: Kenney (CC0) · RobotExpressive por Quaternius (CC0)</footer>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

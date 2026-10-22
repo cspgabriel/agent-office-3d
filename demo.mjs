@@ -138,7 +138,7 @@ export function createDemoCli() {
       if (args.includes("--status") && status === "blocked") {
         return { issues: [...blockedIds].map((id, k) => ({ id: uid(400 + k, "c"), identifier: `DEMO-9${k}`, title: k ? "Waiting for login approval" : "Missing API key", assignee_type: "agent", assignee_id: id })) };
       }
-      return { issues, has_more: false };
+      return { issues: args.includes("--status") ? issues.filter((i) => i.status === status) : issues, has_more: false };
     }
     if (a === "issue" && b === "get") return issues.find((i) => i.id === c || i.identifier === c) ?? { ...issues[1], id: c, identifier: "DEMO-200", status: "in_progress" };
     if (a === "issue" && b === "comment") return [{ id: "c1", type: "comment", author_type: "member", content: "Demo comment: please start with the summary.", created_at: iso(start - 600_000) }];

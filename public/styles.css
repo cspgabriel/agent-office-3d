@@ -612,3 +612,11 @@ details.settings > summary::-webkit-details-marker { display: none; }
 .m-step.err { color: #ff8a80; }
 .m-timeline { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
 .m-timeline small { color: var(--muted); margin-right: 4px; }
+
+/* v25: execuções de hoje e Descanso */
+.tag .nm .td { display: block; font-size: 8.5px; color: #9fdcb8; font-weight: 600; }
+.zone-label.rest { background: rgba(109, 90, 140, 0.95); color: #fff; border-color: #a08cc8; }
+#scene[data-theme="premium"] .zone-label.rest { background: rgba(48, 34, 74, 0.92) !important; border-color: rgba(160, 140, 200, 0.6) !important; }
+.today-chip { font-size: 10px; color: #7ee2a8; margin-left: 4px; }
+.today-chip.bad { color: #ff8a80; }
+.tag .nm:has(.td) { -webkit-line-clamp: 3; }

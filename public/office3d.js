@@ -111,6 +111,16 @@ const DORM_MAX = 12; // camas no dormitório das tarefas agendadas
 const BED_DX = 2.6;
 const BED_DZ = 3.6;
 
+/** Ocioso que já executou algo hoje (vai para o Descanso). */
+export const workedToday = (a) => (a.today?.runs ?? 0) > 0;
+
+/** Copa/Descanso: cantos de conversa de 4 lugares; cresce de 8 em 8 pessoas. */
+function loungePlan(kind, n) {
+  const sets = Math.max(2, Math.ceil((Math.ceil(Math.max(n, 1) / 8) * 8) / 4));
+  const lc = Math.ceil(Math.sqrt(sets * 1.4));
+  return { kind, sets, cols: lc, w: lc * SET + 2, d: Math.ceil(sets / lc) * SET + 4.5 };
+}
+
 function plan(data, compact = false, dormN = 0, confN = 1) {
   const total = data.agents.length;
   const blocked = data.agents.filter((a) => a.state === "blocked").length;
@@ -123,10 +133,8 @@ function plan(data, compact = false, dormN = 0, confN = 1) {
 
   // A copa comporta todos os agentes, então não muda de tamanho quando
   // alguém para de trabalhar.
-  const idleN = data.agents.filter((a) => a.state === "idle").length;
-  const sets = Math.max(2, Math.ceil((Math.ceil(Math.max(idleN, 1) / 8) * 8) / 4));
-  const lc = Math.ceil(Math.sqrt(sets * 1.4));
-  const lounge = { kind: "lounge", sets, cols: lc, w: lc * SET + 2, d: Math.ceil(sets / lc) * SET + 4.5 };
+  const lounge = loungePlan("lounge", data.agents.filter((a) => a.state === "idle" && !workedToday(a)).length);
+  const rest = loungePlan("rest", data.agents.filter((a) => a.state === "idle" && workedToday(a)).length);
   const meetCap = compact ? Math.max(4, Math.ceil(blocked / 4) * 4) : Math.max(8, Math.ceil(blocked / 8) * 8);
   const meeting = { kind: "meeting", cap: meetCap, w: Math.max(10, (meetCap / 2) * 1.5 + 4), d: 9 };
   const sCols = compact ? 3 : 6;
@@ -136,7 +144,7 @@ function plan(data, compact = false, dormN = 0, confN = 1) {
   const dCols = Math.min(4, Math.max(1, dormN));
   const dorm = dormN ? { kind: "dorm", n: dormN, cols: dCols, w: dCols * BED_DX + 2.5, d: Math.ceil(dormN / dCols) * BED_DZ + 3 } : null;
   const confs = Array.from({ length: Math.min(CONF_MAX, Math.max(1, confN)) }, () => ({ kind: "conf", cap: CONF_CAP, w: 12, d: 9 }));
-  const front = [lounge, rooms[0], ...confs, reception, meeting, sleep, ...(dorm ? [dorm] : [])];
+  const front = [lounge, rest, rooms[0], ...confs, reception, meeting, sleep, ...(dorm ? [dorm] : [])];
   const frontRow = shelf(front, 999, 2);
 
   const W = Math.max(work.w, frontRow.w) + MARGIN * 2;
@@ -148,7 +156,7 @@ function plan(data, compact = false, dormN = 0, confN = 1) {
     f.x += MARGIN + extra * i;
     f.z = frontZ + (frontD - f.d);
   });
-  return { W, D, rooms, lounge, meeting, sleep, reception, dorm, confs, conf: confs[0], corridorZ: MARGIN + 1.2 };
+  return { W, D, rooms, lounge, rest, meeting, sleep, reception, dorm, confs, conf: confs[0], corridorZ: MARGIN + 1.2 };
 }
 
 // ---------------- Mobília ----------------
@@ -520,6 +528,15 @@ function buildAvatar(agent) {
 }
 
 /** Pose parada no lugar: sentado na mesa, no sofá, dormindo ou em pé. */
+/** "⚡3 hoje · 👀1" para o rótulo de quem já trabalhou hoje. */
+function todayBadge(a) {
+  const t = a.today;
+  if (!t?.runs) return "";
+  const parts = [`⚡${t.runs}${t.failed ? ` (${t.failed}❌)` : ""}`];
+  if (a.review) parts.push(`👀${a.review}`);
+  return `<span class="td">${parts.join(" · ")}</span>`;
+}
+
 function pose(av, kind, t, seed) {
   const sit = kind === "desk" || kind === "sofa" || kind === "sleep" || kind === "meet";
   av.legL.rotation.x = av.legR.rotation.x = sit ? Math.PI / 2 : 0;
@@ -918,48 +935,58 @@ export function createOffice(host, { onSelect, onSelectSchedule = () => {}, onSp
     }
 
     // Copa: cantos de conversa alternando sofás e mesas altas.
-    const L = p.lounge;
-    const lg = add(new THREE.Group());
-    lg.position.set(L.x, 0, L.z);
-    lg.add(at(box(L.w, 0.06, L.d, floorMat(THEME.copa, L.w, L.d, 3), { cast: false }), L.w / 2, 0.13, L.d / 2));
-    for (let z = 2.5; z < L.d - 1.5; z += 3.5) lg.add(at(plant(1.7), 0.7, 0.1, z), at(plant(1.7), L.w - 0.7, 0.1, z));
-    const bar = kit("kitchenBar", 2);
-    if (bar) {
-      const n = Math.max(1, Math.floor((L.w - 6) / 2));
-      for (let i = 0; i < n; i++) lg.add(at(kit("kitchenBar", 2), 3 + i * 2, 0.1, 0.6));
-      lg.add(at(kit("kitchenCoffeeMachine", 0.75) ?? new THREE.Group(), 3, 0.1 + kitHeight("kitchenBar", 2), 0.6));
-      lg.add(at(kit("kitchenFridgeLarge", 1.6) ?? new THREE.Group(), L.w - 1.6, 0.1, 0.7));
-      lg.add(at(kit("bookcaseOpen", 1.4) ?? new THREE.Group(), 1.1, 0.1, 0.5));
-    } else {
-      lg.add(at(box(L.w - 2, 1, 0.8, mat(0xf4f1ea)), L.w / 2, 0.6, 0.6)); // balcão
-      lg.add(at(box(0.7, 0.9, 0.5, mat(0x263238)), 2, 1.55, 0.6)); // máquina de café
-      lg.add(at(box(1.2, 2.2, 0.9, mat(0xdfe6ea)), L.w - 1.4, 1.2, 0.6)); // geladeira
-    }
-    lg.add(at(plant(1.2), 0.8, 0.1, L.d - 0.8), at(plant(1.2), L.w - 0.8, 0.1, L.d - 0.8));
-    lg.add(label(`☕ Copa · sem atividade (<span data-zone="idle">0</span>)`, "zone-label", L.w / 2, 0.3, L.d + 0.3));
-    L.spots = [];
-    for (let s = 0; s < L.sets; s++) {
-      const cx = 1 + (s % L.cols) * SET + SET / 2;
-      const cz = 2 + Math.floor(s / L.cols) * SET + SET / 2;
-      const sofaSet = s % 2 === 0;
-      if (sofaSet) {
-        lg.add(at(box(1.4, 0.4, 0.8, mat(0x5d4037)), cx, 0.3, cz));
-        for (const side of [-1, 1]) {
-          const so = sofa(side < 0 ? 0x3f6e8c : 0x8c5a3f);
-          so.position.set(cx, 0.1, cz + side * 1.35);
-          so.rotation.y = side < 0 ? Math.PI : 0;
-          lg.add(so);
-        }
-        for (const [ox, side] of [[-0.6, -1], [0.6, -1], [-0.6, 1], [0.6, 1]]) {
-          L.spots.push({ x: L.x + cx + ox, z: L.z + cz + side * 1.25, rot: side < 0 ? Math.PI : 0, kind: "sofa" });
-        }
+    // Copa (quem ainda não trabalhou hoje) e Descanso (quem já voltou de alguma tarefa hoje).
+    for (const [L, title, cls, colors] of [
+      [p.lounge, `☕ Copa · ainda não trabalharam hoje (<span data-zone="fresh">0</span>)`, "", [0x3f6e8c, 0x8c5a3f]],
+      [p.rest, `🛋️ Descanso · já trabalharam hoje (<span data-zone="rest">0</span>)<span data-zone="review" data-prefix=" · 👀 " data-suffix=" em revisão"></span>`, "rest", [0x6d5a8c, 0x4f7a6a]],
+    ]) {
+      const lg = add(new THREE.Group());
+      lg.position.set(L.x, 0, L.z);
+      lg.add(at(box(L.w, 0.06, L.d, floorMat(THEME.copa, L.w, L.d, 3), { cast: false }), L.w / 2, 0.13, L.d / 2));
+      for (let z = 2.5; z < L.d - 1.5; z += 3.5) lg.add(at(plant(1.7), 0.7, 0.1, z), at(plant(1.7), L.w - 0.7, 0.1, z));
+      const bar = L.kind === "lounge" && kit("kitchenBar", 2);
+      if (L.kind !== "lounge") {
+        // Descanso: estante, luminárias e tapete; sem cozinha.
+        lg.add(at(kit("bookcaseOpen", 1.4) ?? new THREE.Group(), 1.1, 0.1, 0.5), at(kit("bookcaseOpen", 1.4) ?? new THREE.Group(), L.w - 1.1, 0.1, 0.5));
+        lg.add(at(kit("lampSquareFloor", 0.3) ?? new THREE.Group(), L.w / 2, 0.1, 0.6));
+        lg.add(at(box(L.w - 2.4, 0.02, L.d - 3, mat(0x7b6a8f, { roughness: 1 }), { cast: false }), L.w / 2, 0.16, L.d / 2 + 0.3));
+      } else if (bar) {
+        const n = Math.max(1, Math.floor((L.w - 6) / 2));
+        for (let i = 0; i < n; i++) lg.add(at(kit("kitchenBar", 2), 3 + i * 2, 0.1, 0.6));
+        lg.add(at(kit("kitchenCoffeeMachine", 0.75) ?? new THREE.Group(), 3, 0.1 + kitHeight("kitchenBar", 2), 0.6));
+        lg.add(at(kit("kitchenFridgeLarge", 1.6) ?? new THREE.Group(), L.w - 1.6, 0.1, 0.7));
+        lg.add(at(kit("bookcaseOpen", 1.4) ?? new THREE.Group(), 1.1, 0.1, 0.5));
       } else {
-        const table = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.06, 20), mat(0xf4f1ea));
-        const kt = kit("tableRound", 1.3);
-        if (kt) lg.add(at(kt, cx, 0.1, cz), at(kit("rugRound", 3.2) ?? new THREE.Group(), cx, 0.12, cz));
-        else lg.add(at(table, cx, 1.15, cz), at(box(0.1, 1.1, 0.1, mat(0x37474f)), cx, 0.6, cz));
-        for (const [ox, oz] of [[0, -1.05], [1.05, 0], [0, 1.05], [-1.05, 0]]) {
-          L.spots.push({ x: L.x + cx + ox, z: L.z + cz + oz, rot: Math.atan2(ox, oz), kind: "chat" });
+        lg.add(at(box(L.w - 2, 1, 0.8, mat(0xf4f1ea)), L.w / 2, 0.6, 0.6)); // balcão
+        lg.add(at(box(0.7, 0.9, 0.5, mat(0x263238)), 2, 1.55, 0.6)); // máquina de café
+        lg.add(at(box(1.2, 2.2, 0.9, mat(0xdfe6ea)), L.w - 1.4, 1.2, 0.6)); // geladeira
+      }
+      lg.add(at(plant(1.2), 0.8, 0.1, L.d - 0.8), at(plant(1.2), L.w - 0.8, 0.1, L.d - 0.8));
+      lg.add(label(title, `zone-label ${cls}`, L.w / 2, 0.3, L.d + 0.3));
+      L.spots = [];
+      for (let s = 0; s < L.sets; s++) {
+        const cx = 1 + (s % L.cols) * SET + SET / 2;
+        const cz = 2 + Math.floor(s / L.cols) * SET + SET / 2;
+        const sofaSet = s % 2 === 0;
+        if (sofaSet) {
+          lg.add(at(box(1.4, 0.4, 0.8, mat(0x5d4037)), cx, 0.3, cz));
+          for (const side of [-1, 1]) {
+            const so = sofa(side < 0 ? colors[0] : colors[1]);
+            so.position.set(cx, 0.1, cz + side * 1.35);
+            so.rotation.y = side < 0 ? Math.PI : 0;
+            lg.add(so);
+          }
+          for (const [ox, side] of [[-0.6, -1], [0.6, -1], [-0.6, 1], [0.6, 1]]) {
+            L.spots.push({ x: L.x + cx + ox, z: L.z + cz + side * 1.25, rot: side < 0 ? Math.PI : 0, kind: "sofa" });
+          }
+        } else {
+          const table = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.06, 20), mat(0xf4f1ea));
+          const kt = kit("tableRound", 1.3);
+          if (kt) lg.add(at(kt, cx, 0.1, cz), at(kit("rugRound", 3.2) ?? new THREE.Group(), cx, 0.12, cz));
+          else lg.add(at(table, cx, 1.15, cz), at(box(0.1, 1.1, 0.1, mat(0x37474f)), cx, 0.6, cz));
+          for (const [ox, oz] of [[0, -1.05], [1.05, 0], [0, 1.05], [-1.05, 0]]) {
+            L.spots.push({ x: L.x + cx + ox, z: L.z + cz + oz, rot: Math.atan2(ox, oz), kind: "chat" });
+          }
         }
       }
     }
@@ -1469,7 +1496,9 @@ export function createOffice(host, { onSelect, onSelectSchedule = () => {}, onSp
         seatOf.set(a.id, i);
       }
       for (const st of seats) if (st.owner) out.set(st.owner, { pos: st.pos.clone(), rot: st.rot, kind: "desk", cz, lane, lobby, seat: st, entry: st.entry });
-      by("idle").forEach((a, i) => s.p.lounge.spots[i] && out.set(a.id, toWorld(s.p.lounge.spots[i])));
+      const idle = by("idle");
+      idle.filter((a) => !workedToday(a)).forEach((a, i) => s.p.lounge.spots[i] && out.set(a.id, toWorld(s.p.lounge.spots[i])));
+      idle.filter(workedToday).forEach((a, i) => s.p.rest.spots[i] && out.set(a.id, toWorld(s.p.rest.spots[i])));
       by("blocked").forEach((a, i) => s.p.meeting.spots[i] && out.set(a.id, toWorld(s.p.meeting.spots[i])));
       by("offline").forEach((a, i) => s.p.sleep.spots[i] && out.set(a.id, toWorld(s.p.sleep.spots[i])));
     }
@@ -1500,7 +1529,8 @@ export function createOffice(host, { onSelect, onSelectSchedule = () => {}, onSp
       vis.machines.map((m) => [m.name, m.online]),
       Math.ceil(vis.agents.filter((a) => a.state === "blocked").length / 8),
       Math.ceil(vis.agents.filter((a) => a.state === "offline").length / 6),
-      Math.ceil(vis.agents.filter((a) => a.state === "idle").length / 8),
+      Math.ceil(vis.agents.filter((a) => a.state === "idle" && !workedToday(a)).length / 8),
+      Math.ceil(vis.agents.filter((a) => a.state === "idle" && workedToday(a)).length / 8),
       Math.min(DORM_MAX, (data.schedules ?? []).filter((s) => s.status === "active").length),
       groups.map((g) => Math.min(CONF_MAX, Math.max(1, meetingsOf(g.vis).length))),
     ]);
@@ -1584,12 +1614,12 @@ export function createOffice(host, { onSelect, onSelectSchedule = () => {}, onSp
       // Quem trabalha mostra nome e PC; a tarefa fica na lista e no detalhe.
       const html =
         (a.state === "working"
-          ? `<div class="bubble"><b><i class="be">${esc(a.emoji)}</i>${esc(a.name)}</b><span class="pc">💻 ${esc(a.machine)}${a.work?.[0]?.issue ? ` · ${esc(a.work[0].issue.identifier)}` : ""}</span></div>`
+          ? `<div class="bubble"><b><i class="be">${esc(a.emoji)}</i>${esc(a.name)}</b><span class="pc">💻 ${esc(a.machine)}${a.work?.[0]?.issue ? ` · ${esc(a.work[0].issue.identifier)}` : ""}${a.today?.runs ? ` · ⚡${a.today.runs} hoje` : ""}</span></div>`
           : "") +
         `<div class="em">${a.state === "blocked" ? "⛔" : offline ? "💤" : esc(a.emoji)}</div>` +
         (a.state === "working"
           ? ""
-          : `<div class="nm">${esc(a.emoji)} ${esc(a.name)}${a.state === "blocked" ? ` · ${a.blocked.length} bloqueada(s)` : ""}</div>`);
+          : `<div class="nm">${esc(a.emoji)} ${esc(a.name)}${a.state === "blocked" ? ` · ${a.blocked.length} bloqueada(s)` : ""}${todayBadge(a)}</div>`);
       if (av.tagEl.dataset.html !== html) {
         av.tagEl.innerHTML = html;
         av.tagEl.dataset.html = html;
@@ -1619,6 +1649,14 @@ export function createOffice(host, { onSelect, onSelectSchedule = () => {}, onSp
       if (el.dataset.roomNames !== undefined) {
         const w = agents.filter((a) => a.machine === el.dataset.roomNames && a.state === "working");
         el.textContent = w.length ? ` · ${w.slice(0, 3).map((a) => `${a.emoji} ${a.name.length > 18 ? a.name.slice(0, 17) + "…" : a.name}`).join(", ")}${w.length > 3 ? ` +${w.length - 3}` : ""}` : "";
+        continue;
+      }
+      if (["fresh", "rest", "review"].includes(el.dataset.zone)) {
+        const idle = agents.filter((a) => a.state === "idle");
+        const n = el.dataset.zone === "fresh" ? idle.filter((a) => !workedToday(a)).length
+          : el.dataset.zone === "rest" ? idle.filter(workedToday).length
+          : idle.filter(workedToday).reduce((t, a) => t + (a.review ?? 0), 0);
+        el.textContent = el.dataset.prefix ? (n ? `${el.dataset.prefix}${n}${el.dataset.suffix ?? ""}` : "") : n;
         continue;
       }
       el.textContent = el.dataset.zone

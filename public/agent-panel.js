@@ -80,6 +80,7 @@ export function createAgentPanel(el, { getAgent, onClose, onAuthChange, onChange
     head.innerHTML = `
       <h2><span>${esc(a.emoji)}</span>${esc(a.name)}</h2>
       <div class="meta"><span class="dot ${a.state}"></span> ${STATE_LABEL[a.state]} · 💻 ${esc(a.machine)} · ${esc(a.provider)}${a.squad ? ` · 👥 ${esc(a.squad)}${a.leader ? " (líder)" : ""}` : ""}</div>
+      <div class="meta">${a.today?.runs ? `⚡ <b>${a.today.runs}</b> execuç${a.today.runs > 1 ? "ões" : "ão"} hoje · ✅ ${a.today.ok}${a.today.failed ? ` · ❌ ${a.today.failed}` : ""}${a.today.lastAt ? ` · última ${new Date(a.today.lastAt).toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" })}` : ""}` : "Ainda não executou nada hoje"}${a.review ? ` · 👀 ${a.review} em revisão` : ""}</div>
       ${auth.auth ? `<div class="head-actions">
         <button type="button" data-act="talk" title="Abre uma conversa entre este agente e outro, no mesmo tópico">🗣️ Conversar com outro agente</button>
         <button type="button" data-act="meet" title="Reunião com vários agentes para uma mesma tarefa">🤝 Chamar para reunião</button></div>` : ""}

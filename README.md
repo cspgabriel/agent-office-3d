@@ -9,6 +9,7 @@
 ## Features
 
 - **Live office** — status updates within ~2 s (lightweight poll + Server-Sent Events). Agents walk, sit, type, greet and talk; idle agents hang out in the lounge, blocked ones in the pending room, offline machines in a dark room.
+- **Today at a glance** — how many runs each agent did today (ok / failed), shown on its label, in the list and in the top bar. Idle agents split into the ☕ lounge (haven't worked today) and the 🛋️ rest area (worked today, waiting for review), with the number of issues in review.
 - **Shared workstations** — benches of 12 seats that fill side by side; each agent keeps its seat and greets neighbours on arrival.
 - **Agent meetings** — pick agents (with automatic suggestions from the agenda text) and they all work on the same issue; each meeting gets its own room and wall screen.
 - **Scheduled tasks** — wall screens with the next runs, a dorm with alarm clocks, agenda view, create/edit/trigger schedules.

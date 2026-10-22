@@ -150,7 +150,13 @@ function renderStats() {
   const count = (s) => data.agents.filter((a) => a.state === s).length;
   $("#stats").innerHTML = Object.entries(STATES)
     .map(([k, v]) => `<button type="button" class="chip" data-chip="${k}" title="Filtrar: ${v.label}"><span class="dot ${k}"></span><b>${count(k)}</b> ${v.label.toLowerCase()}</button>`)
-    .join("");
+    .join("") +
+    // Quantos já trabalharam hoje e o total de execuções do dia.
+    (() => {
+      const worked = data.agents.filter((a) => a.today?.runs);
+      const runs = worked.reduce((t, a) => t + a.today.runs, 0);
+      return worked.length ? `<span class="chip" title="Agentes que já executaram algo hoje · execuções do dia">⚡ <b>${worked.length}</b> trabalharam hoje · ${runs} execuções</span>` : "";
+    })();
   $("#count-agents").textContent = data.agents.length;
   $("#count-schedules").textContent = data.schedules?.length ?? 0;
   $("#updated").textContent = `Atualizado às ${new Date(data.updatedAt).toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo" })}`;
@@ -196,7 +202,7 @@ function renderSide() {
               .map(
                 (a) => `<li class="agent ${a.id === selectedId ? "selected" : ""}" data-id="${a.id}">
                   <span class="avatar">${esc(a.emoji)}<i class="dot ${a.state}"></i></span>
-                  <span class="name">${esc(a.name)}<small>${a.state === "working" && a.work?.[0]?.startedAt ? `⏱ ${elapsed(a.work[0].startedAt)} · ` : ""}${esc(taskLabel(a) || `${STATES[a.state].label} · ${a.provider}`)}</small></span></li>`,
+                  <span class="name">${esc(a.name)}<small>${a.state === "working" && a.work?.[0]?.startedAt ? `⏱ ${elapsed(a.work[0].startedAt)} · ` : ""}${esc(taskLabel(a) || `${STATES[a.state].label} · ${a.provider}`)}${a.today?.runs ? `<span class="today-chip ${a.today.failed ? "bad" : ""}" title="Execuções hoje: ${a.today.ok} concluída(s), ${a.today.failed} com falha">⚡${a.today.runs} hoje</span>` : ""}</small></span></li>`,
               )
               .join(""),
         )

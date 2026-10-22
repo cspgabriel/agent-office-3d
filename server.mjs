@@ -17,6 +17,7 @@ import { createMeetings } from "./meetings.mjs";
 import { createHistory } from "./history.mjs";
 import { createManage } from "./manage.mjs";
 import { createDemoCli, demoMeetings } from "./demo.mjs";
+import { createToday } from "./today.mjs";
 
 // `node server.mjs --hash-password 'senha'` imprime o valor de ADMIN_PASSWORD_HASH.
 if (process.argv[2] === "--hash-password") {
@@ -230,8 +231,19 @@ async function buildSchedules() {
   return out.sort((a, b) => (a.nextRunAt ?? "9").localeCompare(b.nextRunAt ?? "9"));
 }
 
+/** Todas as issues "Em revisão" (até 5 páginas de 100). */
+async function inReviewIssues() {
+  const issues = [];
+  for (let page = 0; page < 5; page++) {
+    const res = await multica(["issue", "list", "--status", "in_review", "--limit", "100", "--offset", String(page * 100), "--fields", "assignee_type,assignee_id"]);
+    issues.push(...(res.issues ?? []));
+    if (!res.has_more) break;
+  }
+  return { issues };
+}
+
 async function buildSnapshot() {
-  const [agents, runtimesRaw, blockedRaw, squads, , schedules] = await Promise.all([
+  const [agents, runtimesRaw, blockedRaw, squads, , schedules, reviewRaw] = await Promise.all([
     multica(["agent", "list"]),
     multica(["runtime", "list"]),
     multica(["issue", "list", "--status", "blocked", "--limit", "100", "--fields", "id,identifier,title,assignee_type,assignee_id"]),
@@ -241,7 +253,11 @@ async function buildSnapshot() {
       console.error(`agendadas: ${e.message}`);
       return snapshot?.schedules ?? [];
     }),
+    // Issues "Em revisão" por agente: quem já entregou e espera revisão.
+    inReviewIssues().catch(() => ({ issues: [] })),
   ]);
+  const inReview = new Map();
+  for (const i of reviewRaw.issues ?? []) if (i.assignee_type === "agent") inReview.set(i.assignee_id, (inReview.get(i.assignee_id) ?? 0) + 1);
   const runtimes = Array.isArray(runtimesRaw) ? runtimesRaw : (runtimesRaw.runtimes ?? []);
   const runtimeById = new Map(runtimes.map((r) => [r.id, r]));
   const blocked = (blockedRaw.issues ?? []).filter((i) => i.assignee_type === "agent");
@@ -287,6 +303,7 @@ async function buildSnapshot() {
       leader: squads.get(a.id)?.leader ?? false,
       work: work.get(a.id) ?? [],
       blocked: myBlocked,
+      review: inReview.get(a.id) ?? 0,
     };
   });
 
@@ -323,7 +340,10 @@ async function poll() {
       snapshot = next;
       lastError = null;
       // Primeira leitura pronta: aquece o Histórico para abrir sem espera.
-      if (firstLoad) setTimeout(() => history.warm(), 5000);
+      if (firstLoad) {
+        today.refresh(next.agents.map((a) => a.id)).then(broadcast, () => {});
+        setTimeout(() => history.warm(), 5000);
+      }
       broadcast();
     } catch (e) {
       lastError = e.message;
@@ -335,6 +355,9 @@ async function poll() {
   pollTimer = setTimeout(poll, POLL_SECONDS * 1000);
 }
 
+// Execuções de hoje por agente: relê a cada 5 min e avisa os navegadores.
+const today = createToday({ multica });
+setInterval(() => snapshot && today.refresh(snapshot.agents.map((a) => a.id)).then(broadcast, () => {}), 5 * 60_000).unref();
 const changedAt = new Map(); // agentId → quando a leitura rápida viu o status mudar
 
 // ---------- tempo real ----------
@@ -342,7 +365,7 @@ const changedAt = new Map(); // agentId → quando a leitura rápida viu o statu
 const clients = new Set();
 function officeBody() {
   return snapshot
-    ? { ...snapshot, meetings: meetings.active(), agents: snapshot.agents.map((ag) => ({ ...ag, look: looks.get(ag.id) })) }
+    ? { ...snapshot, meetings: meetings.active(), agents: snapshot.agents.map((ag) => ({ ...ag, look: looks.get(ag.id), today: today.of(ag.id) })) }
     : { error: lastError ?? "carregando" };
 }
 let lastSent = "";
@@ -413,7 +436,8 @@ async function fastPoll() {
             return a.state === "working" ? a : { ...a, state: "working", work: [] };
           }
           if (a.state !== "working") return a;
-          // Parou: volta ao estado de base (pendência > desligado > ocioso).
+          // Parou: volta ao estado de base (pendência > desligado > ocioso) e conta a execução de hoje.
+          today.finished(a.id);
           const offline = snapshot.machines.find((m) => m.name === a.machine)?.online === false;
           return { ...a, state: a.blocked.length ? "blocked" : offline ? "offline" : "idle", work: [] };
         });

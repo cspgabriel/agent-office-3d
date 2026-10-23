@@ -84,7 +84,7 @@ export function createAgentPanel(el, { getAgent, onClose, onAuthChange, onChange
       ${auth.auth ? `<div class="head-actions">
         <button type="button" data-act="talk" title="Abre uma conversa entre este agente e outro, no mesmo tópico">🗣️ Conversar com outro agente</button>
         <button type="button" data-act="meet" title="Reunião com vários agentes para uma mesma tarefa">🤝 Chamar para reunião</button></div>` : ""}
-      ${a.work.length ? `<div class="section-title">Agora</div>${a.work.map((w) => `<div class="item">${w.issue ? `<b>${esc(w.issue.identifier)}</b> ${esc(w.issue.title)}` : esc(w.label)} <small>· ${ago(w.startedAt)}</small></div>`).join("")}` : ""}
+      ${a.work.length ? `<div class="section-title">Agora${a.work.length > 1 ? ` · ${a.work.filter((w) => !w.queued).length} ao mesmo tempo` : ""}</div>${a.work.map((w) => `<div class="item">${w.queued ? "🕓" : w.kind === "chat" ? "💬" : w.kind === "autopilot" ? "⏰" : "📋"} ${w.issue ? `<b>${esc(w.issue.identifier)}</b> ${esc(w.issue.title)}` : esc(w.label ?? w.kind)} <small>· ${w.queued ? "na fila" : ago(w.startedAt)}</small></div>`).join("")}` : ""}
       ${a.blocked.length ? `<div class="section-title">🚧 Pendências (${a.blocked.length} bloqueada${a.blocked.length > 1 ? "s" : ""})</div>${a.blocked
         .map((b) => `<div class="item pend"><div><b>${esc(b.identifier)}</b> ${esc(b.title)}</div>${auth.auth && b.id ? `<div class="run-actions">
             <button type="button" class="primary" data-act="issue-status" data-status="done" data-issue="${b.id}" data-label="${esc(b.identifier)}">✅ Concluir</button>

@@ -13,6 +13,7 @@ import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js"
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
 import { createRio } from "./rio.js";
+import { activeWork, workIcon, workSummary, workTitle } from "./work.js";
 import { OUTFITS, outfitTexture, sleeveColor } from "./looks.js";
 import { kit, kitHeight, loading as modelsLoading, makeRobot } from "./models.js";
 
@@ -216,7 +217,8 @@ function drawScreen(d, agent) {
   x.fillStyle = "#2ecc71";
   x.font = "bold 26px ui-monospace, monospace";
   const w = agent.work?.[0];
-  x.fillText(w?.issue?.identifier ?? (w?.label?.startsWith("Chat") ? "💬 chat" : "▶ run"), 12, 34);
+  const n = activeWork(agent).length;
+  x.fillText(`${w?.issue?.identifier ?? (w?.label?.startsWith("Chat") ? "💬 chat" : "▶ run")}${n > 1 ? `  ×${n}` : ""}`, 12, 34);
   const colors = ["#7fb3ff", "#c3e88d", "#ffcb6b", "#f78c6c", "#89ddff"];
   let seed = hueOf(agent.id) * 1000;
   for (let i = 0; i < 8; i++) {
@@ -528,6 +530,22 @@ function buildAvatar(agent) {
 }
 
 /** Pose parada no lugar: sentado na mesa, no sofá, dormindo ou em pé. */
+/**
+ * Balão de quem trabalha. Uma coisa só: nome + PC + issue. Mais de uma ao mesmo
+ * tempo: "×3" junto do nome, "💬2 · 📋1" e a lista do que é cada uma.
+ */
+function workBubble(a) {
+  const sum = workSummary(a);
+  const active = activeWork(a);
+  const one = active[0];
+  const multi = sum.n > 1 || sum.queued;
+  const list = multi
+    ? `<span class="wl">${active.slice(0, 3).map((w) => `<i>${workIcon(w)} ${esc(workTitle(w))}</i>`).join("")}${active.length > 3 ? `<i>+${active.length - 3} mais</i>` : ""}</span>`
+    : "";
+  return `<div class="bubble ${multi ? "multi" : ""}"><b><i class="be">${esc(a.emoji)}</i>${esc(a.name)}${sum.n > 1 ? `<span class="mult" title="${sum.n} execuções ao mesmo tempo">×${sum.n}</span>` : ""}</b>` +
+    `<span class="pc">💻 ${esc(a.machine)}${multi ? ` · ${esc(sum.text)}` : one?.issue ? ` · ${esc(one.issue.identifier)}` : one?.kind === "chat" ? " · 💬 chat" : ""}${a.today?.runs ? ` · ⚡${a.today.runs} hoje` : ""}</span>${list}</div>`;
+}
+
 /** "⚡3 hoje · 👀1" para o rótulo de quem já trabalhou hoje. */
 function todayBadge(a) {
   const t = a.today;
@@ -1614,7 +1632,7 @@ export function createOffice(host, { onSelect, onSelectSchedule = () => {}, onSp
       // Quem trabalha mostra nome e PC; a tarefa fica na lista e no detalhe.
       const html =
         (a.state === "working"
-          ? `<div class="bubble"><b><i class="be">${esc(a.emoji)}</i>${esc(a.name)}</b><span class="pc">💻 ${esc(a.machine)}${a.work?.[0]?.issue ? ` · ${esc(a.work[0].issue.identifier)}` : ""}${a.today?.runs ? ` · ⚡${a.today.runs} hoje` : ""}</span></div>`
+          ? workBubble(a)
           : "") +
         `<div class="em">${a.state === "blocked" ? "⛔" : offline ? "💤" : esc(a.emoji)}</div>` +
         (a.state === "working"

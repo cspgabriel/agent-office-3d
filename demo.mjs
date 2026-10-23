@@ -130,6 +130,14 @@ export function createDemoCli() {
       if (working.has(c)) {
         const issue = issues[parseInt(c.slice(-3), 10) % issues.length];
         list.unshift({ id: `${c.slice(0, 30)}aaaa`, agent_id: c, kind: "direct", status: "running", created_at: iso(NOW() - 90_000), dispatched_at: iso(NOW() - 88_000), issue_id: issue.id });
+        // Alguns agentes atendem vários chats e tarefas ao mesmo tempo (e um fica na fila).
+        if (parseInt(c.slice(-3), 10) % 3 === 0) {
+          list.unshift(
+            { id: `${c.slice(0, 30)}bbbb`, agent_id: c, kind: "chat", status: "running", created_at: iso(NOW() - 60_000), attribution: { initiator: { name: "Ana" } } },
+            { id: `${c.slice(0, 30)}cccc`, agent_id: c, kind: "chat", status: "running", created_at: iso(NOW() - 30_000), attribution: { initiator: { name: "Bruno" } } },
+            { id: `${c.slice(0, 30)}dddd`, agent_id: c, kind: "direct", status: "queued", created_at: iso(NOW() - 10_000), issue_id: issues[(parseInt(c.slice(-3), 10) + 3) % issues.length].id },
+          );
+        }
       }
       return list;
     }

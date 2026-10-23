@@ -8,6 +8,7 @@ import { createFeed, createPalette, readHash, writeHash } from "./extras.js";
 import { createMeetings } from "./meetings.js";
 import { createHistory } from "./history.js";
 import { createIssueDrawer } from "./manage.js";
+import { activeWork, workIcon, workSummary, workTitle } from "./work.js";
 
 const STATES = {
   working: { label: "Trabalhando" },
@@ -30,6 +31,8 @@ let query = "";
 let view = "3d";
 
 function taskLabel(agent) {
+  const sum = workSummary(agent);
+  if (sum.text) return `${sum.text} — ${activeWork(agent).map(workTitle).join(" | ")}`;
   const w = agent.work?.[0];
   if (w?.issue) return `${w.issue.identifier} · ${w.issue.title}`;
   if (w?.label) return w.label;
@@ -648,9 +651,9 @@ function renderWorkingNow() {
       ? ""
       : `<ul>${list
           .map((a) => {
-            const w = a.work?.[0];
-            const task = w?.issue ? `${w.issue.identifier} · ${w.issue.title}` : w?.label ?? "";
-            return `<li data-id="${a.id}" class="${a.id === selectedId ? "sel" : ""}"><span class="em">${esc(a.emoji)}</span><span class="tx"><b>${esc(a.name)}</b><small>💻 ${esc(a.machine)} · ${esc(a.provider)}</small>${task ? `<small class="task">${esc(task)}</small>` : ""}</span></li>`;
+            const sum = workSummary(a);
+            const tasks = activeWork(a).map((w) => `<small class="task">${sum.n > 1 ? `${workIcon(w)} ` : ""}${esc(workTitle(w))}</small>`).join("");
+            return `<li data-id="${a.id}" class="${a.id === selectedId ? "sel" : ""}"><span class="em">${esc(a.emoji)}</span><span class="tx"><b>${esc(a.name)}${sum.n > 1 ? ` <span class="mult">×${sum.n}</span>` : ""}</b><small>💻 ${esc(a.machine)} · ${esc(a.provider)}${sum.text ? ` · ${esc(sum.text)}` : ""}</small>${tasks}</span></li>`;
           })
           .join("")}</ul>`);
 }

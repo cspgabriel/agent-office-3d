@@ -131,6 +131,7 @@ function emojiOf(avatarUrl) {
 }
 
 const issueCache = new Map(); // id → { at, issue }
+const workAt = new Map(); // agentId → última leitura das execuções em andamento
 async function issueById(id) {
   const hit = issueCache.get(id);
   if (hit && Date.now() - hit.at < 5 * 60_000) return hit.issue;
@@ -140,13 +141,17 @@ async function issueById(id) {
   return issue;
 }
 
+const LIVE_RUN = new Set(["running", "dispatched"]);
+const QUEUED_RUN = new Set(["queued", "pending", "waiting_local_directory"]);
+/** O que o agente está fazendo agora: todas as execuções em andamento (e as na fila, marcadas). */
 async function currentWork(agentId) {
-  const runs = await multica(["agent", "tasks", agentId, "--limit", "5"]);
+  workAt.set(agentId, Date.now());
+  const runs = await multica(["agent", "tasks", agentId, "--limit", "15"]);
   const list = Array.isArray(runs) ? runs : (runs.tasks ?? runs.runs ?? []);
-  const running = list.filter((r) => r.status === "running" || r.status === "dispatched");
+  const active = [...list.filter((r) => LIVE_RUN.has(r.status)), ...list.filter((r) => QUEUED_RUN.has(r.status))];
   return Promise.all(
-    running.map(async (r) => {
-      const base = { kind: r.kind, startedAt: r.started_at ?? r.created_at };
+    active.map(async (r) => {
+      const base = { id: r.id, kind: r.kind, startedAt: r.started_at ?? r.created_at, ...(QUEUED_RUN.has(r.status) ? { queued: true } : {}) };
       if (r.issue_id) {
         try {
           return { ...base, issue: await issueById(r.issue_id) };
@@ -451,6 +456,19 @@ async function fastPoll() {
             agents: snapshot.agents.map((a) => (works.get(a.id)?.length && a.state === "working" ? { ...a, work: works.get(a.id) } : a)),
           };
           applyStarting(snapshot.agents);
+          broadcast();
+        }
+        // Quem já está trabalhando pode pegar mais um chat/tarefa em paralelo:
+        // relê as execuções de até 6 agentes por ciclo, a cada ~12 s cada.
+        const stale = snapshot.agents
+          .filter((a) => a.state === "working" && !needWork.includes(a.id) && Date.now() - (workAt.get(a.id) ?? 0) > 12_000)
+          .slice(0, 6);
+        if (stale.length) {
+          const fresh = new Map(await Promise.all(stale.map(async (a) => [a.id, await currentWork(a.id).catch(() => null)])));
+          snapshot = {
+            ...snapshot,
+            agents: snapshot.agents.map((a) => (fresh.get(a.id)?.length && a.state === "working" ? { ...a, work: fresh.get(a.id) } : a)),
+          };
           broadcast();
         }
       }

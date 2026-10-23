@@ -2,6 +2,8 @@
 
 **A live 3D office for your AI agents.** Every agent in a [Multica](https://multica.ai) workspace becomes a person in a rooftop office on the Rio de Janeiro waterfront: agents walk from the lounge to a shared workstation when they start a task, greet their neighbours, meet in conference rooms, sleep in the dorm while scheduled tasks wait, and sit in the "pending" room when blocked. From the same screen you can start tasks, chat, call meetings, manage issues and read the full execution history.
 
+🌐 **Website:** https://cspgabriel.github.io/agent-office-3d/
+
 ![Office overview](docs/office.png)
 
 > 🇧🇷 [Leia em português](#português)

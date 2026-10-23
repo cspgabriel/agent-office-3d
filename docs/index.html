@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Agent Office 3D — a live 3D office for your AI agents</title>
+  <meta name="description" content="Open-source live 3D office for AI agents. Every agent of a Multica workspace becomes a person in a Rio de Janeiro rooftop office: tasks, chats, meetings, schedules, history and management in one screen." />
+  <meta property="og:title" content="Agent Office 3D — a live 3D office for your AI agents" />
+  <meta property="og:description" content="Watch your AI agents work: they walk to a shared desk when a task starts, meet in rooms, rest when done. Open source, MIT, no build step." />
+  <meta property="og:image" content="https://cspgabriel.github.io/agent-office-3d/social.jpg" />
+  <meta property="og:url" content="https://cspgabriel.github.io/agent-office-3d/" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" href="logo.svg" />
+  <style>
+    :root { --bg: #070d1a; --panel: #0f1a2e; --line: #22324f; --text: #e8eef8; --muted: #93a2bd; --teal: #2ec4b6; --gold: #f6b94a; --radius: 16px; }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; font: 16px/1.6 Inter, "Segoe UI", system-ui, -apple-system, sans-serif; color: var(--text); background: var(--bg); }
+    a { color: var(--teal); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .wrap { width: min(1120px, 92vw); margin: 0 auto; }
+    nav { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(10px); background: rgba(7, 13, 26, 0.75); border-bottom: 1px solid rgba(255,255,255,.06); }
+    nav .wrap { display: flex; align-items: center; gap: 24px; height: 60px; }
+    nav .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--text); }
+    nav .brand img { width: 30px; height: 30px; border-radius: 8px; }
+    nav .links { margin-left: auto; display: flex; gap: 22px; font-size: 14px; }
+    nav .links a { color: var(--muted); }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 12px; font-weight: 600; border: 1px solid var(--line); color: var(--text); background: var(--panel); }
+    .btn:hover { text-decoration: none; border-color: var(--teal); }
+    .btn.primary { background: linear-gradient(180deg, #2ec4b6, #1b8a7e); border-color: transparent; color: #04211e; }
+    header.hero { position: relative; padding: 84px 0 40px; overflow: hidden; background: radial-gradient(ellipse 80% 60% at 70% 0%, rgba(46,196,182,.18), transparent 60%), radial-gradient(ellipse 60% 50% at 10% 10%, rgba(246,185,74,.12), transparent 60%); }
+    .hero h1 { font-size: clamp(36px, 5.4vw, 64px); line-height: 1.05; margin: 0 0 18px; letter-spacing: -0.02em; }
+    .hero h1 span { background: linear-gradient(90deg, var(--teal), var(--gold)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .hero p.lead { font-size: clamp(17px, 2vw, 21px); color: var(--muted); max-width: 720px; margin: 0 0 28px; }
+    .hero .ctas { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+    .hero .meta { color: var(--muted); font-size: 13px; display: flex; gap: 18px; flex-wrap: wrap; }
+    .shot { margin-top: 44px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line); box-shadow: 0 30px 80px rgba(0,0,0,.55); }
+    .shot img { display: block; width: 100%; height: auto; }
+    section { padding: 72px 0; }
+    section h2 { font-size: clamp(26px, 3.4vw, 38px); margin: 0 0 10px; letter-spacing: -0.01em; }
+    section p.sub { color: var(--muted); margin: 0 0 36px; max-width: 760px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 22px; }
+    .card .ic { font-size: 26px; }
+    .card h3 { margin: 8px 0 6px; font-size: 17px; }
+    .card p { margin: 0; color: var(--muted); font-size: 14.5px; }
+    .duo { display: grid; grid-template-columns: 1.1fr 1fr; gap: 36px; align-items: center; margin-bottom: 56px; }
+    .duo.flip { grid-template-columns: 1fr 1.1fr; }
+    .duo.flip .media { order: 2; }
+    .duo img { width: 100%; border-radius: var(--radius); border: 1px solid var(--line); }
+    .duo h3 { font-size: 24px; margin: 0 0 10px; }
+    .duo p { color: var(--muted); margin: 0 0 10px; }
+    .tag { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--gold); margin-bottom: 8px; }
+    pre { background: #050a14; border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; overflow-x: auto; font: 14px/1.6 ui-monospace, "Cascadia Code", Menlo, monospace; color: #cfe3f5; }
+    pre .c { color: #6b7d99; }
+    .steps { counter-reset: s; display: grid; gap: 14px; }
+    .steps li { list-style: none; position: relative; padding-left: 44px; }
+    .steps li::before { counter-increment: s; content: counter(s); position: absolute; left: 0; top: 0; width: 30px; height: 30px; border-radius: 50%; background: var(--panel); border: 1px solid var(--teal); color: var(--teal); display: grid; place-items: center; font-weight: 700; font-size: 14px; }
+    .arch { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+    .arch .card code { color: var(--gold); }
+    footer { border-top: 1px solid var(--line); padding: 32px 0 48px; color: var(--muted); font-size: 14px; }
+    footer .wrap { display: flex; gap: 16px; flex-wrap: wrap; justify-content: space-between; }
+    @media (max-width: 820px) { .duo, .duo.flip { grid-template-columns: 1fr; } .duo.flip .media { order: 0; } nav .links { display: none; } }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="wrap">
+      <a class="brand" href="#"><img src="logo.svg" alt="" />Agent Office 3D</a>
+      <div class="links"><a href="#features">Features</a><a href="#tour">Tour</a><a href="#start">Get started</a><a href="#how">How it works</a></div>
+      <a class="btn" href="https://github.com/cspgabriel/agent-office-3d">★ GitHub</a>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="wrap">
+      <h1>Watch your AI agents<br /><span>actually work.</span></h1>
+      <p class="lead">Agent Office 3D turns every agent of a <a href="https://multica.ai">Multica</a> workspace into a person in a rooftop office on the Rio de Janeiro waterfront. They walk to a shared desk when a task starts, greet their neighbours, meet in conference rooms and rest when they're done — and you manage tasks, chats, meetings and schedules from the same screen.</p>
+      <div class="ctas">
+        <a class="btn primary" href="#start">Try the demo in 1 minute</a>
+        <a class="btn" href="https://github.com/cspgabriel/agent-office-3d">View on GitHub</a>
+      </div>
+      <div class="meta"><span>MIT license</span><span>Node.js 20+, zero dependencies</span><span>No build step</span><span>Demo mode included</span></div>
+      <div class="shot"><img src="office.webp" alt="The 3D office: lounge, shared workstation, meeting rooms, reception, pending room and dorm" width="1440" height="860" /></div>
+    </div>
+  </header>
+
+  <section id="features">
+    <div class="wrap">
+      <h2>A control room that people actually want to look at</h2>
+      <p class="sub">Dashboards tell you numbers. The office shows you who is working on what, right now — and lets you act on it.</p>
+      <div class="grid">
+        <div class="card"><div class="ic">⚡</div><h3>Live in ~2 seconds</h3><p>A lightweight status poll plus Server-Sent Events. When an agent starts a task it walks from the lounge to its seat; when it finishes, it heads to the rest area.</p></div>
+        <div class="card"><div class="ic">🧠</div><h3>Real context, not IDs</h3><p>Each label says what the agent is working on and what it is doing right now — taken from the run itself. Click to open the issue or the run's steps.</p></div>
+        <div class="card"><div class="ic">🤹</div><h3>Concurrent work</h3><p>Agents handling several chats and tasks at once show ×N with “💬2 · 📋1 · 🕓1 queued” and a list of each one.</p></div>
+        <div class="card"><div class="ic">🤝</div><h3>Agent meetings</h3><p>Pick agents (with suggestions from the agenda text) and they collaborate on the same issue. Each meeting gets its own room and wall screen.</p></div>
+        <div class="card"><div class="ic">⏰</div><h3>Scheduled tasks</h3><p>Wall screens with the next runs, a dorm with alarm clocks, an agenda view, and create / edit / trigger schedules.</p></div>
+        <div class="card"><div class="ic">📜</div><h3>History & management</h3><p>Every execution, scheduled run, chat and issue by activity. Change status, priority, assignee or due date, comment and wake the agent, rerun, cancel, bulk-edit, search.</p></div>
+        <div class="card"><div class="ic">☕</div><h3>Today at a glance</h3><p>Runs per agent today on every label. Idle agents split into the lounge (not worked yet) and the rest area (done, waiting for review).</p></div>
+        <div class="card"><div class="ic">🎨</div><h3>Themes & brands</h3><p>Premium rooftop, classic waterfront or minimal. One codebase serves many installs, each with its own name, logo and workspace.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="tour">
+    <div class="wrap">
+      <div class="duo">
+        <div class="media"><img src="workstation.webp" alt="Agents sitting side by side at a shared workstation, with the scheduled tasks wall screen" loading="lazy" width="1440" height="860" /></div>
+        <div><span class="tag">Shared workstation</span><h3>Benches that fill side by side</h3><p>Working agents sit next to each other at 12-seat benches, keep their seat while they work and wave to neighbours when they arrive. The wall screen lists the next scheduled runs.</p></div>
+      </div>
+      <div class="duo flip">
+        <div class="media"><img src="concurrent.webp" alt="Labels showing ×3 with two chats, one task and one queued item" loading="lazy" width="1440" height="860" /></div>
+        <div><span class="tag">Concurrency</span><h3>See every chat and task at once</h3><p>One agent, three things in parallel? The label shows it — and the “Working now” panel lists each item with what it is about.</p></div>
+      </div>
+      <div class="duo">
+        <div class="media"><img src="meeting.webp" alt="A meeting room with agents around an oval table and a screen showing the agenda" loading="lazy" width="1440" height="860" /></div>
+        <div><span class="tag">Meetings</span><h3>Call a meeting of agents</h3><p>Choose who joins, write the agenda and the coordinator consolidates the answer on a single issue. Participants walk to their own room and take turns talking.</p></div>
+      </div>
+      <div class="duo flip">
+        <div class="media"><img src="history.webp" alt="History view with 24h summary cards and a list of executions" loading="lazy" width="1440" height="860" /></div>
+        <div><span class="tag">History</span><h3>Know what happened, fix what didn't</h3><p>24-hour success rate, failures (including “workspace out of credits”), every execution with its steps, and full issue management without leaving the office.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="start">
+    <div class="wrap">
+      <h2>Get started</h2>
+      <p class="sub">Try it without a Multica workspace in demo mode, then point it at yours.</p>
+      <ol class="steps">
+        <li><b>Run the demo</b> — fictional agents, read-only:
+<pre><span class="c"># Node.js 20+ — no npm install needed</span>
+git clone https://github.com/cspgabriel/agent-office-3d
+cd agent-office-3d
+DEMO=1 npm start        <span class="c"># Windows PowerShell: $env:DEMO=1; npm start</span>
+<span class="c"># open http://127.0.0.1:3050</span></pre></li>
+        <li><b>Connect your workspace</b> — install and log in to the Multica CLI on the server, then:
+<pre>MULTICA_WORKSPACE_ID=&lt;workspace-id&gt; \
+ADMIN_PASSWORD_HASH="$(node server.mjs --hash-password 'your-password')" \
+SESSION_SECRET="$(openssl rand -hex 32)" \
+BRAND_NAME="Your Company" npm start</pre></li>
+        <li><b>Put it behind HTTPS</b> — a Caddy example, a systemd unit and an auto-updater for several installs live in <code>deploy/</code>.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="how">
+    <div class="wrap">
+      <h2>How it works</h2>
+      <p class="sub">Small, readable modules. The server talks to the <code>multica</code> CLI; the browser renders with three.js. Tests fake the CLI, so you can hack on it without a workspace.</p>
+      <div class="arch">
+        <div class="card"><h3><code>server.mjs</code></h3><p>Reads the workspace through the CLI, masks e-mails and phones, pushes changes over SSE.</p></div>
+        <div class="card"><h3><code>context.mjs</code> · <code>today.mjs</code></h3><p>What each run is about and doing now; runs per agent today.</p></div>
+        <div class="card"><h3><code>meetings</code> · <code>history</code> · <code>manage</code></h3><p>Authenticated actions, each a small module with one <code>handle()</code>.</p></div>
+        <div class="card"><h3><code>public/office3d.js</code></h3><p>Floor plan, avatars, walking, greetings, meeting rooms, themes.</p></div>
+        <div class="card"><h3><code>public/rio.js</code></h3><p>Sky that follows Rio's time, sea, Sugarloaf, Christ the Redeemer, promenade life.</p></div>
+        <div class="card"><h3><code>demo.mjs</code></h3><p>A fake read-only CLI with fictional agents for demos and screenshots.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap" style="text-align:center">
+      <h2>Open source, built in the open</h2>
+      <p class="sub" style="margin-left:auto;margin-right:auto">MIT-licensed. Contributions welcome — English translation of the UI is the first item on the roadmap.</p>
+      <div class="ctas" style="justify-content:center;display:flex;gap:12px;flex-wrap:wrap">
+        <a class="btn primary" href="https://github.com/cspgabriel/agent-office-3d">★ Star on GitHub</a>
+        <a class="btn" href="https://github.com/cspgabriel/agent-office-3d/blob/main/CONTRIBUTING.md">Contribute</a>
+        <a class="btn" href="https://github.com/cspgabriel/agent-office-3d/issues">Report an issue</a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <span>Agent Office 3D · MIT · by Gabriel Salles and contributors</span>
+      <span>3D models by <a href="https://kenney.nl">Kenney</a> and Quaternius (CC0) · <a href="https://threejs.org">three.js</a> · Not affiliated with Multica or Anthropic.</span>
+    </div>
+  </footer>
+</body>
+</html>

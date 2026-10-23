@@ -18,6 +18,7 @@ import { createHistory } from "./history.mjs";
 import { createManage } from "./manage.mjs";
 import { createDemoCli, demoMeetings } from "./demo.mjs";
 import { createToday } from "./today.mjs";
+import { summarize } from "./context.mjs";
 
 // `node server.mjs --hash-password 'senha'` imprime o valor de ADMIN_PASSWORD_HASH.
 if (process.argv[2] === "--hash-password") {
@@ -136,9 +137,32 @@ async function issueById(id) {
   const hit = issueCache.get(id);
   if (hit && Date.now() - hit.at < 5 * 60_000) return hit.issue;
   const full = await multica(["issue", "get", id]);
-  const issue = { identifier: full.identifier, title: redact(full.title), status: full.status };
+  const project = full.project_id ? (await projectNames().catch(() => new Map())).get(full.project_id) : null;
+  const issue = { id: full.id ?? id, identifier: full.identifier, title: redact(full.title), status: full.status, ...(project ? { project } : {}) };
   issueCache.set(id, { at: Date.now(), issue });
   return issue;
+}
+
+let projectCache = { at: 0, names: new Map() };
+/** id do projeto → nome (cache de 10 min). */
+async function projectNames() {
+  if (Date.now() - projectCache.at < 10 * 60_000) return projectCache.names;
+  const res = await multica(["project", "list"]);
+  const list = Array.isArray(res) ? res : (res.projects ?? []);
+  projectCache = { at: Date.now(), names: new Map(list.map((p) => [p.id, redact(p.title ?? p.name ?? "")])) };
+  return projectCache.names;
+}
+
+const contextCache = new Map(); // runId → { at, about, now }
+/** Do que se trata a execução e o que o agente está fazendo agora (mensagens da run, cache de 25 s). */
+async function runContext(runId) {
+  const hit = contextCache.get(runId);
+  if (hit && Date.now() - hit.at < 25_000) return hit;
+  const { about, now } = summarize(await multica(["issue", "run-messages", runId]));
+  const ctx = { at: Date.now(), about: redact(about), now: redact(now) };
+  contextCache.set(runId, ctx);
+  if (contextCache.size > 300) contextCache.delete(contextCache.keys().next().value);
+  return ctx;
 }
 
 const LIVE_RUN = new Set(["running", "dispatched"]);
@@ -151,7 +175,18 @@ async function currentWork(agentId) {
   const active = [...list.filter((r) => LIVE_RUN.has(r.status)), ...list.filter((r) => QUEUED_RUN.has(r.status))];
   return Promise.all(
     active.map(async (r) => {
-      const base = { id: r.id, kind: r.kind, startedAt: r.started_at ?? r.created_at, ...(QUEUED_RUN.has(r.status) ? { queued: true } : {}) };
+      const queued = QUEUED_RUN.has(r.status);
+      const by = r.attribution?.initiator?.name ?? null;
+      const ctx = queued ? null : await runContext(r.id).catch(() => null);
+      const base = {
+        id: r.id,
+        kind: r.kind,
+        startedAt: r.started_at ?? r.created_at,
+        ...(queued ? { queued: true } : {}),
+        ...(by ? { by } : {}),
+        ...(ctx?.about ? { about: ctx.about } : {}),
+        ...(ctx?.now ? { now: ctx.now } : {}),
+      };
       if (r.issue_id) {
         try {
           return { ...base, issue: await issueById(r.issue_id) };

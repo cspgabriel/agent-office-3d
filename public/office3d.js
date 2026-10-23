@@ -13,7 +13,7 @@ import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js"
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
 import { createRio } from "./rio.js";
-import { activeWork, workIcon, workSummary, workTitle } from "./work.js";
+import { activeWork, workAttrs, workIcon, workSummary, workTitle } from "./work.js";
 import { OUTFITS, outfitTexture, sleeveColor } from "./looks.js";
 import { kit, kitHeight, loading as modelsLoading, makeRobot } from "./models.js";
 
@@ -540,8 +540,10 @@ function workBubble(a) {
   const one = active[0];
   const multi = sum.n > 1 || sum.queued;
   const list = multi
-    ? `<span class="wl">${active.slice(0, 3).map((w) => `<i>${workIcon(w)} ${esc(workTitle(w))}</i>`).join("")}${active.length > 3 ? `<i>+${active.length - 3} mais</i>` : ""}</span>`
-    : "";
+    ? `<span class="wl">${active.slice(0, 3).map((w) => `<i ${workAttrs(w, a.id, esc)}>${workIcon(w)} ${esc(workTitle(w))}</i>`).join("")}${active.length > 3 ? `<i>+${active.length - 3} mais</i>` : ""}</span>`
+    : one
+      ? `<span class="wl one"><i ${workAttrs(one, a.id, esc)}>${one.issue ? `${esc(one.issue.project ? `${one.issue.project} · ` : "")}${esc(one.issue.title)}` : esc(workTitle(one))}</i>${one.now ? `<i class="now">✍️ ${esc(one.now)}</i>` : ""}</span>`
+      : "";
   return `<div class="bubble ${multi ? "multi" : ""}"><b><i class="be">${esc(a.emoji)}</i>${esc(a.name)}${sum.n > 1 ? `<span class="mult" title="${sum.n} execuções ao mesmo tempo">×${sum.n}</span>` : ""}</b>` +
     `<span class="pc">💻 ${esc(a.machine)}${multi ? ` · ${esc(sum.text)}` : one?.issue ? ` · ${esc(one.issue.identifier)}` : one?.kind === "chat" ? " · 💬 chat" : ""}${a.today?.runs ? ` · ⚡${a.today.runs} hoje` : ""}</span>${list}</div>`;
 }
@@ -611,7 +613,7 @@ const UNIFIED = "Escritório único";
 const ANNEX_GAP = 26; // distância entre a torre e a Central de Agendamentos
 const POD = 4.6; // espaço de cada quiosque de tarefa agendada
 
-export function createOffice(host, { onSelect, onSelectSchedule = () => {}, onSpot = () => {}, onBoard = () => {}, onConf = () => {} }) {
+export function createOffice(host, { onWork = () => {}, onSelect, onSelectSchedule = () => {}, onSpot = () => {}, onBoard = () => {}, onConf = () => {} }) {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
@@ -1455,6 +1457,16 @@ export function createOffice(host, { onSelect, onSelectSchedule = () => {}, onSp
     return { agents, machines: d.machines };
   }
 
+  /** Clique no rótulo: num item de trabalho abre o detalhe dele; no resto, o agente. */
+  function tagClick(e, agentId) {
+    const it = e.target.closest?.("[data-wrun]");
+    if (it && (it.dataset.wrun || it.dataset.wissue)) {
+      e.stopPropagation();
+      return onWork({ runId: it.dataset.wrun, issueId: it.dataset.wissue, agentId });
+    }
+    onSelect(agentId);
+  }
+
   /** Reuniões abertas com pelo menos um participante nesta visão (até CONF_MAX salas). */
   function meetingsOf(vis) {
     const ids = new Set(vis.agents.map((a) => a.id));
@@ -1584,13 +1596,13 @@ export function createOffice(host, { onSelect, onSelectSchedule = () => {}, onSp
         const keep = { pos: av.pos.clone(), spot: av.spot, placed: av.placed, lastState: av.lastState };
         av = buildAvatar(a);
         Object.assign(av, keep);
-        av.tagEl.addEventListener("click", () => onSelect(a.id));
+        av.tagEl.addEventListener("click", (e) => tagClick(e, a.id));
         avatars.set(a.id, av);
         scene.add(av.g);
       }
       if (!av) {
         av = buildAvatar(a);
-        av.tagEl.addEventListener("click", () => onSelect(a.id));
+        av.tagEl.addEventListener("click", (e) => tagClick(e, a.id));
         avatars.set(a.id, av);
         scene.add(av.g);
       }

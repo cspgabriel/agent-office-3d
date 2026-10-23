@@ -8,7 +8,7 @@ import { createFeed, createPalette, readHash, writeHash } from "./extras.js";
 import { createMeetings } from "./meetings.js";
 import { createHistory } from "./history.js";
 import { createIssueDrawer } from "./manage.js";
-import { activeWork, workIcon, workSummary, workTitle } from "./work.js";
+import { activeWork, workAttrs, workIcon, workSummary, workTitle } from "./work.js";
 
 const STATES = {
   working: { label: "Trabalhando" },
@@ -34,8 +34,7 @@ function taskLabel(agent) {
   const sum = workSummary(agent);
   if (sum.text) return `${sum.text} — ${activeWork(agent).map(workTitle).join(" | ")}`;
   const w = agent.work?.[0];
-  if (w?.issue) return `${w.issue.identifier} · ${w.issue.title}`;
-  if (w?.label) return w.label;
+  if (w) return workTitle(w);
   if (agent.state === "blocked" && agent.blocked[0]) return `${agent.blocked[0].identifier} bloqueada`;
   return "";
 }
@@ -56,6 +55,7 @@ function toast(msg, ok = true) {
 
 const office = createOffice($("#scene"), {
   onSelect: (id) => select(id, true),
+  onWork: (w) => openWork(w),
   onSelectSchedule: (id) => selectSchedule(id),
   onBoard: () => setView("agenda"),
   onConf: () => meetings.open({ list: (data?.meetings ?? []).length > 0 }),
@@ -285,6 +285,26 @@ const historyView = createHistory($("#history"), {
   onIssue: (id) => issueDrawer.open(id),
   onRun: (r) => issueDrawer.openRun(r),
 });
+/** Abre o detalhe de um trabalho em andamento: a issue (painel de gestão) ou os passos do chat/execução. */
+function openWork({ runId, issueId, agentId }) {
+  if (issueId) return issueDrawer.open(issueId);
+  const w = data?.agents.find((a) => a.id === agentId)?.work.find((x) => x.id === runId);
+  if (!runId) return;
+  issueDrawer.openRun({ id: runId, agentId, kind: w?.kind ?? "chat", status: w?.queued ? "queued" : "running", createdAt: w?.startedAt, by: w?.by, about: w?.about, now: w?.now });
+}
+// Qualquer item de trabalho clicável (lista, Trabalhando agora, painel do agente) abre o detalhe.
+document.addEventListener(
+  "click",
+  (e) => {
+    const it = e.target.closest?.("[data-wrun]");
+    if (!it || !(it.dataset.wrun || it.dataset.wissue)) return;
+    e.stopPropagation();
+    e.preventDefault();
+    openWork({ runId: it.dataset.wrun, issueId: it.dataset.wissue, agentId: it.dataset.wagent });
+  },
+  true,
+);
+
 // Painel de gestão de issue/execução (abre por cima de qualquer visão).
 const issueDrawer = createIssueDrawer($("#issue-detail"), {
   getData: () => data,
@@ -652,7 +672,7 @@ function renderWorkingNow() {
       : `<ul>${list
           .map((a) => {
             const sum = workSummary(a);
-            const tasks = activeWork(a).map((w) => `<small class="task">${sum.n > 1 ? `${workIcon(w)} ` : ""}${esc(workTitle(w))}</small>`).join("");
+            const tasks = activeWork(a).map((w) => `<small class="task" ${workAttrs(w, a.id, esc)}>${sum.n > 1 ? `${workIcon(w)} ` : ""}${esc(workTitle(w))}${w.now ? `<em>✍️ ${esc(w.now)}</em>` : ""}</small>`).join("");
             return `<li data-id="${a.id}" class="${a.id === selectedId ? "sel" : ""}"><span class="em">${esc(a.emoji)}</span><span class="tx"><b>${esc(a.name)}${sum.n > 1 ? ` <span class="mult">×${sum.n}</span>` : ""}</b><small>💻 ${esc(a.machine)} · ${esc(a.provider)}${sum.text ? ` · ${esc(sum.text)}` : ""}</small>${tasks}</span></li>`;
           })
           .join("")}</ul>`);

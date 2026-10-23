@@ -628,3 +628,14 @@ details.settings > summary::-webkit-details-marker { display: none; }
 .tag .bubble .wl { display: flex; flex-direction: column; gap: 1px; margin-top: 2px; max-width: 150px; }
 .tag .bubble .wl i { font-style: normal; font-size: 9px; opacity: 0.9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; }
 #scene.very-far .tag .bubble .wl { display: none; }
+
+/* v27: contexto real do trabalho */
+.tag .bubble .wl.one { max-width: 150px; }
+.tag .bubble .wl i[data-wrun], #working-now .task[data-wrun], #detail .item.clickable { cursor: pointer; }
+.tag .bubble .wl i[data-wrun]:hover, #working-now .task[data-wrun]:hover { text-decoration: underline; }
+.tag .bubble .wl i.now { opacity: 0.75; font-size: 8.5px; }
+#scene.far .tag .bubble .wl i.now { display: none; }
+#working-now .task em { display: block; font-style: normal; opacity: 0.7; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#detail .item .sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.m-ctx { background: var(--panel-2); border-radius: 8px; padding: 6px 10px; margin: 6px 0; font-size: 13px; line-height: 1.4; }
+.m-ctx b { display: block; font-size: 11px; color: var(--muted); font-weight: 600; }

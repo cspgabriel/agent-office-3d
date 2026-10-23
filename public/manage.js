@@ -95,9 +95,12 @@ export function createIssueDrawer(el, { getData, toast, onAgent, onChanged = () 
       el.innerHTML = `<button class="close" type="button" data-m="close" aria-label="Fechar">✕</button>
         <div class="m-head"><h2>${run.kind === "chat" ? "💬 Chat" : "▶️ Execução"} · ${esc(agentName(run.agentId))}</h2>
           <div class="muted">${esc(when(run.createdAt))}${run.by ? ` · por ${esc(run.by)}` : ""} · ${esc(RUN_LABEL[run.status] ?? run.status)}</div>
+          ${run.about ? `<div class="m-ctx"><b>📝 Do que se trata</b>${esc(run.about)}</div>` : ""}
+          ${run.now ? `<div class="m-ctx"><b>✍️ Agora</b>${esc(run.now)}</div>` : ""}
           <p class="muted small">Chats do Multica são só leitura aqui (a CLI não responde em chats de outras pessoas). Para continuar, use “💬 Conversa” no painel do agente.</p>
           <div class="m-actions">${LIVE.has(run.status) ? `<button type="button" class="danger" data-m="cancel-run" data-run="${esc(run.id)}">⏹ Cancelar execução</button>` : ""}
-            <button type="button" data-m="agent" data-agent="${esc(run.agentId)}">Abrir agente</button></div></div>
+            <button type="button" data-m="agent" data-agent="${esc(run.agentId)}">Abrir agente</button>
+            <button type="button" data-m="run-reload">↻ Atualizar passos</button></div></div>
         <div class="m-body">${steps(run.id)}</div>`;
       return;
     }
@@ -185,6 +188,12 @@ export function createIssueDrawer(el, { getData, toast, onAgent, onChanged = () 
     if (d.m === "close") return close();
     if (d.tab) return (tab = d.tab), render();
     if (d.m === "reload") return ref && open(ref);
+    if (d.m === "run-reload" && run) {
+      openSteps.delete(run.id);
+      render();
+      await loadSteps(run.id);
+      return render();
+    }
     if (d.m === "comment") return comment();
     if (d.m === "title") {
       const t = prompt("Novo título:", detail.issue.title);
